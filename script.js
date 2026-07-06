@@ -7,6 +7,13 @@
   const siteNav = document.getElementById("site-nav");
   const themeToggle = document.getElementById("theme-toggle");
   const yearEl = document.getElementById("year");
+  const typewriterEl = document.getElementById("typewriter");
+  const typewriterCursor = document.querySelector(".typewriter-cursor");
+  const backToTopBtn = document.getElementById("back-to-top");
+  const visitorCountEl = document.getElementById("visitor-count");
+
+  const VISITOR_API =
+    "https://countapi.mileshilliard.com/api/v1/hit/portfolio-sophie-chuang-visits";
 
   function getStoredTheme() {
     try {
@@ -149,6 +156,100 @@
     }
   }
 
+  function initTypewriter() {
+    if (!typewriterEl) return;
+
+    const raw = typewriterEl.getAttribute("data-text") || "";
+    const text = raw.replace(/\\n/g, "\n").replace(/&#10;/g, "\n");
+    const speed = 70;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      typewriterEl.textContent = text;
+      if (typewriterCursor) typewriterCursor.classList.add("is-done");
+      return;
+    }
+
+    let index = 0;
+
+    function tick() {
+      if (index < text.length) {
+        typewriterEl.textContent += text.charAt(index);
+        index += 1;
+        setTimeout(tick, speed);
+      } else if (typewriterCursor) {
+        typewriterCursor.classList.add("is-done");
+      }
+    }
+
+    tick();
+  }
+
+  function initMap() {
+    const mapEl = document.getElementById("leaflet-map");
+    if (!mapEl || typeof L === "undefined") return;
+
+    const map = L.map(mapEl, {
+      scrollWheelZoom: false,
+    }).setView([25.0339, 121.5645], 14);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+
+    L.marker([25.0339, 121.5645])
+      .addTo(map)
+      .bindPopup("台北 101")
+      .openPopup();
+
+    mapEl.addEventListener("click", function enableZoom() {
+      map.scrollWheelZoom.enable();
+      mapEl.removeEventListener("click", enableZoom);
+    });
+
+    window.addEventListener("resize", function () {
+      map.invalidateSize();
+    });
+  }
+
+  function initVisitorCount() {
+    if (!visitorCountEl) return;
+
+    fetch(VISITOR_API)
+      .then(function (res) {
+        if (!res.ok) throw new Error("API error");
+        return res.json();
+      })
+      .then(function (data) {
+        if (typeof data.value === "number") {
+          visitorCountEl.textContent = data.value.toLocaleString("zh-TW");
+        }
+      })
+      .catch(function () {
+        visitorCountEl.textContent = "—";
+      });
+  }
+
+  function initBackToTop() {
+    if (!backToTopBtn) return;
+
+    const showThreshold = 400;
+
+    function updateVisibility() {
+      const show = window.scrollY > showThreshold;
+      backToTopBtn.hidden = !show;
+      backToTopBtn.classList.toggle("is-visible", show);
+    }
+
+    window.addEventListener("scroll", updateVisibility, { passive: true });
+    updateVisibility();
+
+    backToTopBtn.addEventListener("click", function () {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initTheme();
     if (themeToggle) {
@@ -158,5 +259,9 @@
     initSmoothScroll();
     initReveal();
     initYear();
+    initTypewriter();
+    initMap();
+    initVisitorCount();
+    initBackToTop();
   });
 })();
